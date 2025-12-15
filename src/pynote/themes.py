@@ -28,7 +28,7 @@ DARK_THEME = {
 }
 
 
-def get_theme(name='light'):
+def get_theme(name='dark'):
     """
     Get theme configuration by name.
     

@@ -27,7 +27,6 @@ ENV/
 env/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -50,3 +49,5 @@ settings.json
 Thumbs.db
 .DS_Store
 
+config.bat
+node_modules

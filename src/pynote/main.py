@@ -1,15 +1,17 @@
 # src/pynote/main.py
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from themes import get_theme, apply_theme
 
 APP_TITLE = "PyNote"
-
 
 class PyNoteApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
         self.geometry('800x600')
+        self.current_theme = 'dark'   # default theme
+        self.theme = get_theme(self.current_theme)
         self._filepath = None
         self._create_widgets()
         self._create_menu()
@@ -17,21 +19,43 @@ class PyNoteApp(tk.Tk):
 
     def _create_widgets(self):
         # Text widget with scrollbar
+
         self.text = tk.Text(self, wrap='word', undo=True)
+        apply_theme(self.text, self.theme)
         self.vsb = ttk.Scrollbar(self, orient='vertical', command=self.text.yview)
         self.text.configure(yscrollcommand=self.vsb.set)
         self.vsb.pack(side='right', fill='y')
         self.text.pack(side='left', fill='both', expand=True)
 
         # status bar
-        self.status = tk.StringVar()
-        self.status.set('Ln 1, Col 0')
-        status_bar = ttk.Label(self, textvariable=self.status, anchor='w')
-        status_bar.pack(side='bottom', fill='x')
+        self.status = tk.StringVar(value='Ln 1, Col 0')
+
+        # CREATE the status bar first
+        self.status_bar = tk.Label(self,textvariable=self.status,anchor='w',
+        bg=self.theme['status_bg'],fg=self.theme['status_fg'],padx=8)
+
+        # THEN apply optional polish
+        self.status_bar.configure(relief='sunken',bd=1,font=('Segoe UI', 9))
+
+        # THEN pack it
+        self.status_bar.pack(side='bottom', fill='x')
 
         # update cursor position
         self.text.bind('<KeyRelease>', self._update_status)
         self.text.bind('<ButtonRelease>', self._update_status)
+
+
+    def toggle_theme(self):
+        # switch theme name
+        self.current_theme = 'light' if self.current_theme == 'dark' else 'dark'
+        self.theme = get_theme(self.current_theme)
+
+        # apply to text editor
+        apply_theme(self.text, self.theme)
+
+        # apply to status bar
+        self.status_bar.configure(bg=self.theme['status_bg'],fg=self.theme['status_fg'])
+
 
     def _create_menu(self):
         menu = tk.Menu(self)
@@ -51,6 +75,8 @@ class PyNoteApp(tk.Tk):
         self.bind('<Control-n>', lambda e: self.new_file())
         self.bind('<Control-z>', lambda e: self.text.event_generate('<<Undo>>'))
         self.bind('<Control-y>', lambda e: self.text.event_generate('<<Redo>>'))
+        self.bind('<Control-t>', lambda e: self.toggle_theme())
+
 
     def new_file(self):
         if self._confirm_discard():
@@ -104,10 +130,21 @@ class PyNoteApp(tk.Tk):
                 messagebox.showerror('Error', f'Failed to save file: {str(e)}')
 
     def _update_status(self, event=None):
-        idx = self.text.index(tk.INSERT).split('.')
-        line = idx[0]
-        col = idx[1]
-        self.status.set(f'Ln {line}, Col {col}')
+        # cursor position
+        line, col = self.text.index(tk.INSERT).split('.')
+
+        # full text content
+        content = self.text.get('1.0', 'end-1c')
+
+        # character count (excluding trailing newline)
+        char_count = len(content)
+
+        # word count (split by whitespace)
+        word_count = len(content.split()) if content.strip() else 0
+
+        # update status bar
+        self.status.set(f'Ln {line}, Col {col} | Words: {word_count} | Chars: {char_count}')
+
 
     def _confirm_discard(self):
         if self.text.edit_modified():
